@@ -9,10 +9,10 @@ import java.sql.SQLException;
 public class DaoFactory {
     @Bean
     public UserDao awsUserDao() throws SQLException {
-        return new UserDao(new AwsConnectionMaker().makeConnection());
+        return new UserDao(new AwsConnectionMaker());
     }
     @Bean
     public UserDao localUserDao() throws SQLException {
-        return new UserDao(new LocalConnectionMaker().makeConnection());
+        return new UserDao(new LocalConnectionMaker());
     }
 }

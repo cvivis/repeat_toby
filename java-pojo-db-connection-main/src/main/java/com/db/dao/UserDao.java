@@ -7,74 +7,49 @@ import com.db.domain.User;
 import org.springframework.dao.EmptyResultDataAccessException;
 
 public class UserDao {
-    private Connection c;
+    private ConnectionMaker connectionMaker;
 
-    UserDao(Connection connection) {
-        this.c = connection;
+    UserDao(ConnectionMaker connectionMaker) {
+        this.connectionMaker = connectionMaker;
     }
 
-    public void add(User user) throws SQLException {
+    public int jdbcContextWithStatementStrategy(StatementStrategy st) throws SQLException {
         PreparedStatement ps = null;
-        try {
-            // Query문 작성
-            ps = c.prepareStatement("INSERT INTO users(id, name, password) VALUES(?,?,?);");
-            ps.setString(1, user.getId());
-            ps.setString(2, user.getName());
-            ps.setString(3, user.getPassword());
-
-            // Query문 실행
-            ps.executeUpdate();
-//
-//            ps.close();
-//            c.close();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-//        }finally {
-//            if (ps != null) {
-//                try {
-//                    ps.close();
-//                } catch (SQLException e) {
-//                }
-//            }
-//            if (c != null) {
-//                try {
-//                    c.close();
-//                } catch (SQLException e) {
-//                }
-//            }
+        Connection c = connectionMaker.makeConnection();
+        try{
+            ps = st.makePreparedStatement(c);
+            int result = ps.executeUpdate();
+            return result;
+        }catch (SQLException e) {
+            throw e;
+        }finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                }
+            }
+            if (c != null) {
+                try {
+                    c.close();
+                } catch (SQLException e) {
+                }
+            }
         }
     }
 
-    public int deleteAll() throws SQLException {
-        PreparedStatement ps = null;
-//        try {
-        // Query문 작성
-        ps = c.prepareStatement("DELETE FROM users");
-        // Query문 실행
-        int result = ps.executeUpdate();
-        return result;
-
+    public void add(User user) throws SQLException {
+        jdbcContextWithStatementStrategy(new InsertStrategy(user));
     }
-//        } catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        }finally {
-//            if (ps != null) {
-//                try {
-//                    ps.close();
-//                } catch (SQLException e) {
-//                }
-//            }
-//            if (c != null) {
-//                try {
-//                    c.close();
-//                } catch (SQLException e) {
-//                }
-//            }
-//        }
+
+    public int deleteAll() throws SQLException {
+        return jdbcContextWithStatementStrategy(new DeleteAllStrategy());
+    }
+
 
     public int getNum() throws SQLException {
         PreparedStatement ps = null;
+        Connection c = connectionMaker.makeConnection();
         try {
             ps = c.prepareStatement("select count(*) from users");
             ResultSet result = ps.executeQuery();
@@ -85,24 +60,19 @@ public class UserDao {
             return count;
         } catch (SQLException e) {
             throw new RuntimeException(e);
-//        } finally {
-//            if (ps != null) {
-//                try {
-//                    ps.close();
-//                } catch (SQLException e) {
-//                }
-//            }
-//            if (c != null) {
-//                try {
-//                    c.close();
-//                } catch (SQLException e) {
-//                }
-//            }
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                }
+            }
         }
     }
 
     public User get(String id) throws SQLException {
         PreparedStatement ps = null;
+        Connection c = connectionMaker.makeConnection();
         try {
             // Query문 작성
             ps = c.prepareStatement("SELECT * FROM users WHERE id = ?");
@@ -122,18 +92,14 @@ public class UserDao {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-//        finally {
-//            if (ps != null) {
-//                try {
-//                    ps.close();
-//                } catch (SQLException e) {
-//                }
-//            }
-//            if (c != null) {
-//                try {
-//                    c.close();
-//                } catch (SQLException e) {
-//                }
-//            }
+        finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+
     }
 }
