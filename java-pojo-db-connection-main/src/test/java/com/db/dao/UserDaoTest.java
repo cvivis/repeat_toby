@@ -31,12 +31,20 @@ class UserDaoTest {
     @Test
     void addAndGet() throws SQLException {
         User user1 = new User("9", "홍홍홍", "1234");
-
+        User user2 = new User("2", "힝힝힝", "1234");
+        User user3 = new User("3", "헹헹헹", "1234");
         userDao.deleteAll();
         userDao.add(user1);
         Assertions.assertEquals(1,userDao.getNum());
         User user = userDao.get(user1.getId());
         Assertions.assertEquals(user1.getName(),user.getName());
+
+        userDao.add(user2);
+        userDao.add(user3);
+
+        Assertions.assertEquals(3,userDao.getAll().size());
+
+
     }
     @Test
     void addNull(){
