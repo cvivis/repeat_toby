@@ -37,12 +37,8 @@ public class UserDao {
     }
 
     public int deleteAll() throws SQLException {
-        return jdbcContext.jdbcContextWithStatementStrategy(new StatementStrategy() {
-            @Override
-            public PreparedStatement makePreparedStatement(Connection connection) throws SQLException {
-                return connection.prepareStatement("DELETE FROM users");
-            }
-        });
+        // 인자가 필요 없을경우 고정되는 부분이 동일 하기 때문에 executeSql정의해서 불러오기
+        return jdbcContext.executeSql("DELETE FROM users");
     }
 
 
@@ -81,10 +77,6 @@ public class UserDao {
             ResultSet rs = ps.executeQuery();
             rs.next();
             User user = new User(rs.getString("id"), rs.getString("name"), rs.getString("password"));
-
-//            rs.close();
-//            pstmt.close();
-
             return user;
 
         } catch (SQLException e) {
