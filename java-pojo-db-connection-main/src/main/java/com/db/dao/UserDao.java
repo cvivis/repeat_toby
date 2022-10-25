@@ -6,23 +6,27 @@ import java.util.Map;
 import com.db.domain.User;
 import org.springframework.dao.EmptyResultDataAccessException;
 
-public class UserDao {
-    private ConnectionMaker connectionMaker;
+import javax.sql.DataSource;
 
-    UserDao(ConnectionMaker connectionMaker) {
-        this.connectionMaker = connectionMaker;
+public class UserDao {
+
+    private DataSource dataSource; // ConnectionMaker가 필요없어짐 대신 DaoFactory에서 DataSource 주입시켜야함
+
+    UserDao(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     public int jdbcContextWithStatementStrategy(StatementStrategy st) throws SQLException {
         PreparedStatement ps = null;
-        Connection c = connectionMaker.makeConnection();
-        try{
+        Connection c = dataSource.getConnection();
+
+        try {
             ps = st.makePreparedStatement(c);
             int result = ps.executeUpdate();
             return result;
-        }catch (SQLException e) {
+        } catch (SQLException e) {
             throw e;
-        }finally {
+        } finally {
             if (ps != null) {
                 try {
                     ps.close();
@@ -39,17 +43,35 @@ public class UserDao {
     }
 
     public void add(User user) throws SQLException {
-        jdbcContextWithStatementStrategy(new InsertStrategy(user));
+        // 기능마다 Strategy 만드는것은 너무 번거로움 익명 클래스 사용!
+//        jdbcContextWithStatementStrategy(new InsertStrategy(user));
+        jdbcContextWithStatementStrategy(new StatementStrategy() {
+                                             @Override
+                                             public PreparedStatement makePreparedStatement(Connection connection) throws SQLException {
+                                                 PreparedStatement ps = connection.prepareStatement("INSERT INTO users(id, name,password) VALUES (?,?,?)");
+                                                 ps.setString(1, user.getId());
+                                                 ps.setString(2, user.getName());
+                                                 ps.setString(3, user.getPassword());
+                                                 return ps;
+                                             }
+                                         }
+
+        );
     }
 
     public int deleteAll() throws SQLException {
-        return jdbcContextWithStatementStrategy(new DeleteAllStrategy());
+        return jdbcContextWithStatementStrategy(new StatementStrategy() {
+            @Override
+            public PreparedStatement makePreparedStatement(Connection connection) throws SQLException {
+                return connection.prepareStatement("DELETE FROM users");
+            }
+        });
     }
 
 
     public int getNum() throws SQLException {
         PreparedStatement ps = null;
-        Connection c = connectionMaker.makeConnection();
+        Connection c = dataSource.getConnection();
         try {
             ps = c.prepareStatement("select count(*) from users");
             ResultSet result = ps.executeQuery();
@@ -72,7 +94,7 @@ public class UserDao {
 
     public User get(String id) throws SQLException {
         PreparedStatement ps = null;
-        Connection c = connectionMaker.makeConnection();
+        Connection c = dataSource.getConnection();
         try {
             // Query문 작성
             ps = c.prepareStatement("SELECT * FROM users WHERE id = ?");
@@ -81,8 +103,7 @@ public class UserDao {
             // Query문 실행
             ResultSet rs = ps.executeQuery();
             rs.next();
-            User user = new User(rs.getString("id"), rs.getString("name"),
-                    rs.getString("password"));
+            User user = new User(rs.getString("id"), rs.getString("name"), rs.getString("password"));
 
 //            rs.close();
 //            pstmt.close();
@@ -91,8 +112,7 @@ public class UserDao {
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
-        }
-        finally {
+        } finally {
             if (ps != null) {
                 try {
                     ps.close();
