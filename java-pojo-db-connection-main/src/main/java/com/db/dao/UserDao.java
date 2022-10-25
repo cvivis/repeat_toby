@@ -11,41 +11,18 @@ import javax.sql.DataSource;
 public class UserDao {
 
     private DataSource dataSource; // ConnectionMaker가 필요없어짐 대신 DaoFactory에서 DataSource 주입시켜야함
-
+    private JdbcContext jdbcContext;
     UserDao(DataSource dataSource) {
         this.dataSource = dataSource;
+        this.jdbcContext = new JdbcContext(dataSource);
     }
 
-    public int jdbcContextWithStatementStrategy(StatementStrategy st) throws SQLException {
-        PreparedStatement ps = null;
-        Connection c = dataSource.getConnection();
 
-        try {
-            ps = st.makePreparedStatement(c);
-            int result = ps.executeUpdate();
-            return result;
-        } catch (SQLException e) {
-            throw e;
-        } finally {
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (SQLException e) {
-                }
-            }
-            if (c != null) {
-                try {
-                    c.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-    }
 
     public void add(User user) throws SQLException {
         // 기능마다 Strategy 만드는것은 너무 번거로움 익명 클래스 사용!
 //        jdbcContextWithStatementStrategy(new InsertStrategy(user));
-        jdbcContextWithStatementStrategy(new StatementStrategy() {
+        jdbcContext.jdbcContextWithStatementStrategy(new StatementStrategy() {
                                              @Override
                                              public PreparedStatement makePreparedStatement(Connection connection) throws SQLException {
                                                  PreparedStatement ps = connection.prepareStatement("INSERT INTO users(id, name,password) VALUES (?,?,?)");
@@ -60,7 +37,7 @@ public class UserDao {
     }
 
     public int deleteAll() throws SQLException {
-        return jdbcContextWithStatementStrategy(new StatementStrategy() {
+        return jdbcContext.jdbcContextWithStatementStrategy(new StatementStrategy() {
             @Override
             public PreparedStatement makePreparedStatement(Connection connection) throws SQLException {
                 return connection.prepareStatement("DELETE FROM users");
